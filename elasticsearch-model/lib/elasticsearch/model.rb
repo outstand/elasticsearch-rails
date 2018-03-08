@@ -207,11 +207,36 @@ module Elasticsearch
         @settings ||= {}
       end
 
+      # Define a rule for mapping hits to models when searching across multiple models
+      #
+      # @param model_to_hit_selector [lambda(model,hit)] - Must return a boolean
+      #
+      # @example Map indices to models that operate against aliases
+      #
+      #     Elasticsearch::model_to_hit_selector = lambda do |model, hit|
+      #       /#{model.index_name}-.*/ =~ hit[:_index] && model.document_type == hit[:_type]
+      #     end
+      #
+      # @example Map indices to models but disregard the model's index name
+      #
+      #     Elasticsearch::model_to_hit_selector = lambda do |model, hit|
+      #       model.document_type == hit[:_type]
+      #     end
+      #
+      def model_to_hit_selector=(model_to_hit_selector)
+        @model_to_hit_selector = model_to_hit_selector
+      end
+
+      def model_to_hit_selector
+        @model_to_hit_selector ||= lambda { |model, hit| model.index_name == hit[:_index] && model.document_type == hit[:_type] }
+      end
+
       private
 
       STI_DEPRECATION_WARNING = "DEPRECATION WARNING: Support for Single Table Inheritance (STI) is deprecated " +
         "and will be removed in version 7.0.0.\nPlease save different model documents in separate indices and refer " +
         "to the Elasticsearch documentation for more information.".freeze
+
     end
     extend ClassMethods
 
